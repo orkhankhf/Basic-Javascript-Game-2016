@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<meta charset="UTF-8">
+	<style type="text/css">
+	body{
+		margin: 0px;
+		padding: 0px;
+		overflow: hidden;
+	}
+	</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<audio preload="true" id="toqqusma">
+	<source src="blink.wav"/>
+</audio>
+<script type="text/javascript">
+
+
+		//canvas animasiyamiz ucun lazim olan kod
+		window.animasiyaFrameIsteyi = (function() {
+		return window.requestAnimationFrame          ||
+		window.webkitRequestAnimationFrame ||
+		window.mozRequestAnimationFrame ||
+		window.oRequestAnimationFrame ||
+		window.msRequestAnimationFrame ||
+		function( callback ) {
+			return window.setTimeout(callback, 1000 / 60);
+		};
+	}) ();
+
+		window.animasiyaFrameImtina = (function() {
+		return window.cancelAnimationFrame          ||
+		window.webkitCancelRequestAnimationFrame ||
+		window.mozCancelRequestAnimationFrame ||
+		window.oCancelRequestAnimationFrame ||
+		window.msCancelRequestAnimationFrame ||
+		clearTimeout
+	} ) ();
+
+	//canvas deyiseni
+	var canvas = document.getElementById("canvas"),
+	ctx = canvas.getContext("2d"), //canvas context duzeltdim
+	G = window.innerWidth,// oyun sahesi genisliyi
+	Y = window.innerHeight,//oyun sahesi yuksekliyi
+	mouse = {},//mouse obyekti
+	hisseler = [], //hisselerin arrayi
+	topum = {}, //top obyekti
+	cubuqlar = [2], // iki cubugumuz
+	xallar = 0, //oyuncularin xallari
+	suret = 60, // suret
+	deymeHissesi = 20, //deyme
+	deymeDeyiseni = 0,
+	hissePozisiyasi = {}, //hisselerin etrafi
+	qigilcimDeyiseni = 1,
+	baslatButon = {}, //baslat buttonu
+	resetbuton = {}, //reset buttonu
+	bitti = 0,
+	res, //animasiyani basladan deyisken
+	cubuqDeyme;
+
+	//canvasin tam ekran olmasi
+	canvas.width = G;
+	canvas.height = Y;
+
+	canvas.addEventListener("mousemove", mouseHereket, true);
+	canvas.addEventListener("mousedown",buttonKliklendi, true);
+
+
+	//deyme sesi
+	  toqqusma = document.getElementById("toqqusma");
+
+
+	// top obyektimizi yaradiriq
+	topum = {
+		x:50,
+		y:50,
+		r:5,
+		c:"white",
+		xh:4,
+		yh:8,
+
+	cek: function(){
+		ctx.beginPath();
+		ctx.fillStyle = this.c;
+		ctx.arc(this.x, this.y, this.r, 0, Math.PI*2, false);
+		ctx.fill();
+	}
+
+	};
+	// baslat buttonu
+	baslatButon = {
+		w:100,
+		h:50,
+		x:G/2 - 50,
+		y:Y/2 - 25,
+		cek: function(){
+			ctx.strokeStyle = "white";
+			ctx.lineWidth = "2";
+			ctx.strokeRect(this.x, this.y, this.w, this.h);
+			ctx.font = "18px Arial, sans-herif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "white";
+			ctx.fillText("Oyuna Başla", G/2, Y/2);
+		}
+	};
+	//reset buttonu
+	resetButon = {
+		w: 100,
+		h: 50,
+		x: G/2 - 50,
+		y: Y/2 - 50,
+		cek: function(){
+			ctx.strokeStyle = "white";
+			ctx.lineWidth = "2";
+			ctx.strokeRect(this.x, this.y, this.w, this.h);
+			ctx.font = "18px Arial, sans-herif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "white";
+			ctx.fillText("Təkrar oyna", G/2, Y/2 -25);
+		}
+	};
+	//qigilcim yarat
+	function qigilcimYarat(x, y, m){
+		this.x = x || 0;
+		this.y - y || 0;
+
+		this.radius = 1.2;
+
+		this.xh = -1.5 +Math.random() *3;
+		this.yh = m * Math.random() * 1.5;
+		}
+
+		//sureti artir
+		function suretArttir(){
+			if(xallar % 4 == 0){
+				if(Math.abs(topum.xh) < 15){
+					topum.xh += (topum.xh < 0) ? -1 : 1;
+					topum.yh += (topum.yh < 0) ? -2 : 2;
+				}
+			}
+		}
+	// cubuq funksiyasi
+	function CubuqFunc(poz){
+		this.h = 5;
+		this.w = 150;
+
+		// pozisiyasi
+		this.x = G/2 - this.w/2;
+		this.y = (poz == "ust") ? 0 : Y - this.h;
+	}
+
+	cubuqlar.push(new CubuqFunc("asagi"));
+	cubuqlar.push(new CubuqFunc("ust"));
+
+
+function canvasCek() {
+	ctx.fillStyle = "black";
+	ctx.fillRect(0, 0, G, Y);
+}
+
+//herseyi canvasa cekmek ucun lazim olan funksiya
+
+	function cek(){
+		canvasCek();
+		for (var i = 0; i < cubuqlar.length; i++) {
+
+			p = cubuqlar[i];
+			ctx.fillStyle="white";
+			ctx.fillRect(p.x, p.y, p.w, p.h);
+		}
+		topum.cek();
+		yenile();
+		}
+		cek();
+		function animDongu(){
+			res=animasiyaFrameIsteyi(animDongu);
+			cek();
+		}
+		function baslamaEkrani(){
+			cek();
+			baslatButon.cek();
+		}
+		function yenile(){
+			xaliYenile()
+			//topu hereket etdiririk
+			topum.x += topum.xh;
+			topum.y += topum.yh;
+
+			//cubugu hereket etdiririk
+			if(mouse.x && mouse.y){
+				for(var i = 1;i <cubuqlar.length;i++){
+					p = cubuqlar[i];
+					p.x = mouse.x - p.w/2;
+				}
+			}
+			//cubuglari cagir
+			p1 = cubuqlar[1];
+			p2 = cubuqlar[2];
+
+
+			//deyme emeliyyati
+			if(toqqusmalar(topum, p1)){
+				toqqusmaEylemi(topum, p1);
+			}else if(toqqusmalar(topum, p2)){
+				toqqusmaEylemi(topum, p2);
+			}else{
+
+			//top yuxari veya asagi cubuqlara deyerse...
+			if(topum.y + topum.r > Y){
+				topum.y = Y - topum.r;
+				oyunBitti();
+			}else if(topum.y < 0){
+				topum.y = topum.r;
+				oyunBitti();
+			}
+
+			//top sag ve sol divara deyerse
+			if(topum.x + topum.r > G){
+				topum.xh = - topum.xh;
+				topum.x = G - topum.r;
+			}else if(topum.x - topum.r < 0){
+				topum.xh = -topum.xh;
+				topum.x = topum.r;
+			}
+		}// ilk if'in bitisi;
+
+
+		if(deymeDeyiseni == 1){
+			for(var k = 0;k < deymeHissesi;k++){
+				hisseler.push(new qigilcimYarat(hissePozisiyasi.x, hissePozisiyasi.y, coxalt));
+			}
+		}
+		hisseleriyay();
+		deymeDeyiseni = 0;
+			}
+
+		//mouseni hereket etdiririk.
+		function mouseHereket(e){
+			mouse.x = e.pageX;
+			mouse.y = e.pageY;
+		}
+		//top ile cubuq arasindaki deymeni kontrol eden funksiya
+		function toqqusmalar(b, p){
+		if(b.x + topum.r >= p.x && b.x - topum.r <= p.x + p.w ) {
+			if(b.y >= (p.y - p.h) && p.y >0){
+				cubuqDeyme = 1;
+				return true;
+				}else if(b.y <= p.h && p.y == 0){
+					cubuqDeyme = 2;
+					return true;
+				}else{
+					return false;
+				}
+
+			}
+		}
+
+		//deyme emeliyyatinin icra olundugu an
+		function toqqusmaEylemi(topum, p){
+			topum.yh = -topum.yh;
+
+			if(cubuqDeyme == 1){
+				topum.y = p.y - p.h;
+				hissePozisiyasi.y = topum.y - topum.r;
+				coxalt = -1;
+			}
+			else if(cubuqDeyme == 2){
+					topum.y = p.h + topum.r;
+					hissePozisiyasi.y = topum.y - topum.r;
+					coxalt = 1;
+				}
+				xallar++;
+
+				suretArttir();
+
+				if(toqqusma){ //music elave et
+
+					if(xallar > 0){
+						toqqusma.pause();
+					}
+
+					toqqusma.currentTime = 0;
+						
+					toqqusma.play();
+					}
+				
+				hissePozisiyasi.x = topum.x;
+				deymeDeyiseni = 1;
+		}
+		//hisseleri payladigim bolme
+		function hisseleriyay(){
+			for(var j = 0; j < hisseler.length;j++){
+				par = hisseler[j];
+
+				ctx.beginPath();
+				ctx.fillStyle = "white";
+				if(par.radius > 0){
+					ctx.arc(par.x, par.y, par.radius, 0, Math.PI*2, false);
+				}
+					ctx.fill();
+					par.x += par.xh;
+					par.y += par.xy;
+
+					//parcaciklari ekrandan kaybet
+					par.radius = Math.max(par.radius - 0.05, 0.0);
+				
+			}
+		}
+
+		//xal siyahisi
+		function xaliYenile(){
+			ctx.fillStyle = "white";
+			ctx.font = "16px Arial, sans-herif";
+			ctx.textAlign = "left";
+			ctx.textBaseline = "top";
+			ctx.fillText("Xal: "+ xallar , 20, 20);
+		}
+		//oyunu bitiren funksiya
+		function oyunBitti(){
+			ctx.fillStyle = "lightblue";
+			ctx.font = "30px Arial, sans-herif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillText("Cəmi  " + xallar + "  xal qazandınız!", G/2, Y/2 + 25 );
+
+			animasiyaFrameImtina(res);
+			bitti = 1;
+			resetButon.cek();
+		}
+		//button tiklandiginda basla ve ya resetle
+		function buttonKliklendi(e){
+			var mx = e.pageX,
+			my = e.pageY;
+
+			if(mx >= baslatButon.x && mx <= baslatButon.x + baslatButon.w){
+				animDongu();
+				baslatButon = {};
+
+			}
+			if(bitti == 1){
+				if(mx >= resetButon.x && mx <= resetButon.x + resetButon.w){
+					topum.x = 20;
+					topum.y = 20;
+					xallar = 0;
+					topum.xh = 4;
+					topum.yh = 8;
+					animDongu();
+
+					bitti = 0;
+				}
+			}
+		}
+		baslamaEkrani();
+</script>
+
+</body>
+</html>
